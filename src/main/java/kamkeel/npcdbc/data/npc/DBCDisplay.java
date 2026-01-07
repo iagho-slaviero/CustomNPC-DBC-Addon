@@ -31,8 +31,10 @@ import kamkeel.npcdbc.network.packets.player.NPCUpdateForcedColors;
 import kamkeel.npcdbc.network.packets.player.PingFormColorPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.Constants;
+import noppes.npcs.controllers.data.PlayerData;
 import noppes.npcs.entity.EntityCustomNpc;
 import noppes.npcs.entity.EntityNPCInterface;
 import noppes.npcs.entity.data.ModelData;
@@ -41,6 +43,7 @@ import noppes.npcs.scripted.CustomNPCsException;
 import noppes.npcs.util.ValueUtil;
 import org.lwjgl.opencl.CL;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -753,25 +756,36 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
     public void setRacialExtras() {
         noppes.npcs.entity.data.ModelData data = null;
 
-        // 1. Tentar pegar o ModelData se for um NPC real
-        if (npc instanceof noppes.npcs.entity.EntityCustomNpc) {
-            data = ((noppes.npcs.entity.EntityCustomNpc) npc).modelData;
+        // 1. Se for um NPC Customizado (Padrão)
+        if (npc instanceof EntityCustomNpc) {
+            data = ((EntityCustomNpc) npc).modelData;
         }
-        // 2. Se for um Jogador, acessamos via PlayerData (usando Object para burlar o erro de tipo)
+        // 2. CORREÇÃO DO ERRO: Usamos (Object) para permitir a verificação de Player
         else if ((Object) npc instanceof net.minecraft.entity.player.EntityPlayer) {
             net.minecraft.entity.player.EntityPlayer player = (net.minecraft.entity.player.EntityPlayer) (Object) npc;
             noppes.npcs.controllers.data.PlayerData pData = noppes.npcs.controllers.data.PlayerData.get(player);
 
-            // CORREÇÃO: Em vez de pData.modelData, usamos o cast para a Interface do Mixin
-            if (pData instanceof kamkeel.npcdbc.mixins.late.IModelMPM) {
-                data = ((kamkeel.npcdbc.mixins.late.IModelMPM) pData).getModelData();
+            if (pData != null) {
+                // Tenta pegar o 'modelData' via Reflection (pois ele é injetado via Mixin e o IDE não vê)
+                try {
+                    java.lang.reflect.Field f;
+                    try {
+                        f = pData.getClass().getField("modelData");
+                    } catch (NoSuchFieldException e) {
+                        f = pData.getClass().getDeclaredField("modelData");
+                    }
+                    f.setAccessible(true);
+                    data = (noppes.npcs.entity.data.ModelData) f.get(pData);
+                } catch (Exception e) {
+                    // Se falhar, ignoramos silenciosamente para não crashar o jogo
+                }
             }
         }
 
         if (data == null)
             return;
 
-        // Limpar partes existentes para evitar sobreposição
+        // Limpeza inicial
         data.removePart("dbcHorn");
         data.removePart("tail");
         data.removePart("dbcArms");
@@ -781,10 +795,10 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
         if (!enabled || !useSkin)
             return;
 
-        kamkeel.npcdbc.data.form.Form form = getForm();
+        Form form = getForm();
         boolean hasCustomHorns = form != null && form.display.hornType != -1;
 
-        // --- LÓGICA DE RAÇAS ---
+        // --- Lógica de Raças ---
         if (kamkeel.npcdbc.constants.DBCRace.isSaiyan(this.race)) {
             noppes.npcs.entity.data.ModelPartData tail = data.getOrCreatePart("tail");
             tail.setTexture("tail/monkey1", 8);
@@ -796,7 +810,7 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
             data.getOrCreatePart("dbcEars").setTexture("tail/monkey1", 1);
 
             int arcoState = getArco();
-            // Só processa chifres se não for forma final OU se tiver chifre customizado
+            // Só remove se NÃO tiver chifre customizado ou não for forma final
             if (arcoState != 4 || hasCustomHorns) {
                 noppes.npcs.entity.data.ModelPartData horn = data.getOrCreatePart("dbcHorn");
                 if (arcoState == 0 || arcoState == 1) horn.setTexture("tail/monkey1", 2);
@@ -812,15 +826,19 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
                 }
             }
         } else if (this.race == kamkeel.npcdbc.constants.DBCRace.NAMEKIAN) {
-            // Força a criação do chifre (antenas) para Namekuseijins
+            // Força a criação das antenas para Namekuseijins
             data.getOrCreatePart("dbcHorn").setTexture("tail/monkey1", 1);
         }
 
-        // --- GARANTIA PARA FORMAS CUSTOMIZADAS ---
-        // Se a forma tem um chifre selecionado, garantimos que o tipo seja aplicado no ModelData
+        // --- GARANTIA FINAL: Se a forma tem chifre, aplica o tipo correto ---
         if (hasCustomHorns) {
             noppes.npcs.entity.data.ModelPartData horn = data.getOrCreatePart("dbcHorn");
             horn.type = (byte) form.display.hornType;
+
+            // Se não tiver textura definida (acontece com humanos), define uma padrão para não ficar invisível
+            if (horn.location == null) {
+                horn.setTexture("tail/monkey1", 1);
+            }
         }
     }
 

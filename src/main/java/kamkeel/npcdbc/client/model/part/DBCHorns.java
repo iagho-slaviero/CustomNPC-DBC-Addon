@@ -276,43 +276,52 @@ public class DBCHorns extends ModelDBCPartInterface {
         ModelPartData config = data.getPartData("dbcHorn");
         Form form = display.getForm();
 
-        // Se houver forma com chifre OU for Arcosiano, NÃO pode estar escondido
-        boolean shouldShow = (form != null && form.display.hornType != -1) || (display.race == DBCRace.ARCOSIAN);
+        // 1. Lógica de Visibilidade: Mostrar se tiver forma com chifre OU for Arcosiano
+        boolean hasFormHorns = (form != null && (form.display.hornType != -1 || display.race == DBCRace.ARCOSIAN));
 
-        if (shouldShow) {
-            this.isHidden = false;
+        if (hasFormHorns) {
+            isHidden = false;
         } else if (config == null) {
-            this.isHidden = true;
+            isHidden = true;
             return;
         } else {
-            this.isHidden = config.type < 0;
+            isHidden = config.type < 0;
         }
 
-        // Determinar cor
-        this.bodyCM = (config != null) ? config.color : 0xFFFFFF;
+        // 2. Cor
+        bodyCM = (config != null) ? config.color : 0xFFFFFF;
 
-        // Determinar tipo
-        int typeToRender = (config != null) ? config.type : 0;
+        // 3. Determinar ID do Chifre
+        int typeToRender = 0;
+        if (config != null) typeToRender = config.type;
+
         if (form != null) {
+            // Se o usuário selecionou manualmente no GUI da forma
             if (form.display.hornType != -1) {
                 typeToRender = form.display.hornType;
-            } else if (display.race == DBCRace.ARCOSIAN) {
-                int state = display.getArco();
-                if(state == 0 || state == 1) typeToRender = 2;
-                else if(state == 2) typeToRender = 3;
-                else if(state == 3) typeToRender = 4;
-                else if(state == 5) typeToRender = 5;
-                else typeToRender = 0;
+            }
+            // Se for Arcosiano e estiver no "Automático" (None), segue a transformação DBC
+            else if (display.race == DBCRace.ARCOSIAN) {
+                int state = display.getArco(); // 0-5
+                switch (state) {
+                    case 0: case 1: typeToRender = 2; break; // 1st Form
+                    case 2: typeToRender = 3; break; // 2nd Form
+                    case 3: typeToRender = 4; break; // 3rd Form
+                    case 5: typeToRender = 5; break; // Cooler/Ultimate
+                    default: typeToRender = 0; break; // Final/Gold (sem chifre)
+                }
             }
         }
 
-        // Aplicar às partes do modelo
-        NamekianAntennas.isHidden = typeToRender != 1;
-        FirstFormSpikes.isHidden = typeToRender != 2 && typeToRender != 3 && typeToRender != 4;
-        SecondFormSpikes.isHidden = typeToRender != 3 && typeToRender != 4;
-        ThirdFormBigHead.isHidden = typeToRender != 4;
-        CoolerHeadSpikes.isHidden = typeToRender != 5;
+        // 4. Aplicar visibilidade nas partes 3D
+        byte finalType = (byte) typeToRender;
+        NamekianAntennas.isHidden = finalType != 1;
+        FirstFormSpikes.isHidden = finalType != 2 && finalType != 3 && finalType != 4;
+        SecondFormSpikes.isHidden = finalType != 3 && finalType != 4;
+        ThirdFormBigHead.isHidden = finalType != 4;
+        CoolerHeadSpikes.isHidden = finalType != 5;
 
-        this.location = (config != null && !config.playerTexture) ? config.getResource() : null;
+        // 5. Textura
+        location = (config != null && !config.playerTexture) ? config.getResource() : null;
     }
 }
