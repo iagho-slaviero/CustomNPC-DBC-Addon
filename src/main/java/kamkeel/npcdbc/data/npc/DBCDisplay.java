@@ -786,7 +786,7 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
             return;
 
         // Limpeza inicial
-        data.removePart("dbcHorn");
+        data.removePart("dbcHorns");
         data.removePart("tail");
         data.removePart("dbcArms");
         data.removePart("dbcBody");
@@ -812,7 +812,7 @@ public class DBCDisplay implements IDBCDisplay, IAuraData {
             int arcoState = getArco();
             // Só remove se NÃO tiver chifre customizado ou não for forma final
             if (arcoState != 4 || hasCustomHorns) {
-                noppes.npcs.entity.data.ModelPartData horn = data.getOrCreatePart("dbcHorn");
+                noppes.npcs.entity.data.ModelPartData horn = data.getOrCreatePart("dbcHorns");
                 if (arcoState == 0 || arcoState == 1) horn.setTexture("tail/monkey1", 2);
                 if (arcoState == 2) horn.setTexture("tail/monkey1", 3);
                 if (arcoState == 3) {

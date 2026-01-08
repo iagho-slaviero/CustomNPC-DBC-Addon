@@ -11,6 +11,7 @@ import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import kamkeel.npcdbc.CustomNpcPlusDBC;
 import kamkeel.npcdbc.client.ClientConstants;
 import kamkeel.npcdbc.client.ColorMode;
+import kamkeel.npcdbc.client.model.part.DBCHorns;
 import kamkeel.npcdbc.client.model.part.hair.DBCHair;
 import kamkeel.npcdbc.client.render.RenderEventHandler;
 import kamkeel.npcdbc.config.ConfigDBCClient;
@@ -22,6 +23,7 @@ import kamkeel.npcdbc.data.form.FormDisplay;
 import kamkeel.npcdbc.util.Utility;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
+import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -50,6 +52,8 @@ public class MixinModelBipedDBC extends ModelBipedBody {
     String SDDir = CustomNpcPlusDBC.ID + ":textures/sd/";
     @Unique
     String HDDir = CustomNpcPlusDBC.ID + ":textures/hd/";
+    @Unique
+    public DBCHorns dbcHorns;
 
     @Redirect(method = "renderHairs(FLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/ModelRenderer;render(F)V", ordinal = 10, remap = true))
     public void fixTailAnimNotSyncingSai(ModelRenderer instance, float i) {
@@ -231,6 +235,39 @@ public class MixinModelBipedDBC extends ModelBipedBody {
     public void DNSHairRendering(float par1, String h, float hl, int s, int rg, int pl, int rc, RenderPlayerJBRA rp, AbstractClientPlayer abstractClientPlayer, CallbackInfo ci, @Local(ordinal = 0) LocalRef<String> hair, @Local(ordinal = 0) LocalIntRef st, @Local(ordinal = 3) LocalIntRef race) {
         if (ClientEventHandler.renderingPlayer != null) {
             Form form = DBCData.getForm(ClientEventHandler.renderingPlayer);
+
+            if (form != null && form.display.hornType > -1) {
+                if (dbcHorns == null) {
+                    dbcHorns = new DBCHorns((ModelBase)(Object)this);
+                }
+
+                // 1. Reseta visibilidade de todos
+                dbcHorns.FirstFormSpikes.showModel = false;
+                dbcHorns.SecondFormSpikes.showModel = false;
+                dbcHorns.ThirdFormBigHead.showModel = false;
+                dbcHorns.CoolerHeadSpikes.showModel = false;
+                dbcHorns.NamekianAntennas.showModel = false;
+
+                // 2. Ativa apenas o chifre escolhido (IDs alinhados com a GUI)
+                switch (form.display.hornType) {
+                    case 0: dbcHorns.FirstFormSpikes.showModel = true; break;
+                    case 1: dbcHorns.SecondFormSpikes.showModel = true; break;
+                    case 2: dbcHorns.ThirdFormBigHead.showModel = true; break;
+                    case 3: dbcHorns.CoolerHeadSpikes.showModel = true; break;
+                    case 4: dbcHorns.NamekianAntennas.showModel = true; break;
+                }
+
+                // 3. Sincroniza rotação com a cabeça do player
+                dbcHorns.rotateAngleX = this.bipedHead.rotateAngleX;
+                dbcHorns.rotateAngleY = this.bipedHead.rotateAngleY;
+                dbcHorns.rotateAngleZ = this.bipedHead.rotateAngleZ;
+                dbcHorns.rotationPointX = this.bipedHead.rotationPointX;
+                dbcHorns.rotationPointY = this.bipedHead.rotationPointY;
+                dbcHorns.rotationPointZ = this.bipedHead.rotationPointZ;
+
+                // 4. Renderiza
+                dbcHorns.render(0.0625F);
+            }
 
             //set texture for non saiyan CH, animate it when ascending
             if (rc != 1 && rc != 2) {

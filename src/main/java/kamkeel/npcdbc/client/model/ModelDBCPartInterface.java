@@ -1,6 +1,7 @@
 package kamkeel.npcdbc.client.model;
 
 import kamkeel.npcdbc.data.npc.DBCDisplay;
+import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
@@ -17,16 +18,23 @@ public abstract class ModelDBCPartInterface extends ModelRenderer {
     public ModelData data;
     public EntityCustomNpc entity;
     protected ResourceLocation location;
-    public int useColor = 0; // CM, C1, C2, C3
+    public int useColor = 0;
     public int bodyCM = 16777215;
     public int bodyC1 = 16777215;
     public int bodyC2 = 16777215;
     public int bodyC3 = 16777215;
+
     public ModelMPM base;
 
-    public ModelDBCPartInterface(ModelMPM par1ModelBase) {
+    public ModelBase baseModel;
+
+    public ModelDBCPartInterface(ModelBase par1ModelBase) {
         super(par1ModelBase);
-        this.base = par1ModelBase;
+        this.baseModel = par1ModelBase;
+
+        if (par1ModelBase instanceof ModelMPM) {
+            this.base = (ModelMPM) par1ModelBase;
+        }
         this.setTextureSize(0, 0);
     }
 
@@ -49,41 +57,43 @@ public abstract class ModelDBCPartInterface extends ModelRenderer {
     }
 
     public void render(float par1) {
-        if (!this.base.isArmor) {
-            if (this.location != null) {
-                ClientProxy.bindTexture(this.location);
-                this.base.currentlyPlayerTexture = false;
-            } else if (!this.base.currentlyPlayerTexture) {
-                ClientProxy.bindTexture(this.entity.textureLocation);
-                this.base.currentlyPlayerTexture = true;
+        boolean showColor = false;
+        float alpha = 1.0f;
+
+        // Lógica de NPC (Só executa se 'base' e 'entity' existirem)
+        if (this.base != null && this.entity != null) {
+            if (!this.base.isArmor) {
+                if (this.location != null) {
+                    ClientProxy.bindTexture(this.location);
+                    this.base.currentlyPlayerTexture = false;
+                } else if (!this.base.currentlyPlayerTexture) {
+                    ClientProxy.bindTexture(this.entity.textureLocation);
+                    this.base.currentlyPlayerTexture = true;
+                }
             }
+
+            TintData tintData = this.entity.display.tintData;
+            showColor = !this.base.isArmor && tintData.processColor(this.entity.hurtTime > 0 || this.entity.deathTime > 0);
+            alpha = this.base.alpha;
         }
 
-        TintData tintData = this.entity.display.tintData;
-        boolean showColor = !this.base.isArmor && tintData.processColor(this.entity.hurtTime > 0 || this.entity.deathTime > 0);
         if (showColor) {
             int color = this.bodyCM;
             switch (useColor) {
-                case 1:
-                    color = this.bodyC1;
-                    break;
-                case 2:
-                    color = this.bodyC2;
-                    break;
-                case 3:
-                    color = this.bodyC3;
-                    break;
+                case 1: color = this.bodyC1; break;
+                case 2: color = this.bodyC2; break;
+                case 3: color = this.bodyC3; break;
             }
-
             float red = (float) (color >> 16 & 255) / 255.0F;
             float green = (float) (color >> 8 & 255) / 255.0F;
             float blue = (float) (color & 255) / 255.0F;
-            GL11.glColor4f(red, green, blue, this.base.alpha);
+            GL11.glColor4f(red, green, blue, alpha);
         }
 
         super.render(par1);
+
         if (showColor) {
-            GL11.glColor4f(1.0F, 1.0F, 1.0F, this.base.alpha);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, alpha);
         }
     }
 

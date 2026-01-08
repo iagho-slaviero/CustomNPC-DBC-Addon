@@ -28,7 +28,14 @@ public class SubGuiFormDisplay extends SubGuiInterface implements ISubGuiListene
     private final String[] arrRace = new String[]{"display.human", "display.saiyan", "display.halfsaiyan", "display.namekian", "display.arcosian", "display.majin"};
     private final String[] arcoForms = new String[]{"display.arcofirst", "display.arcosecond", "display.arcothird", "display.arcofinal", "display.arcoultimatecooler", "display.arcogoldenform"};
     private final String[] hairTypes = new String[]{"display.base", "display.ssj", "display.ssj2", "display.ssj3", "display.ssj4", "display.oozaru", "display.raditz"};
-    private final String[] hornNames = new String[]{"display.none", "display.namekian", "display.arcofirst", "display.arcosecond", "display.arcothird", "display.arcoultimatecooler"};
+    private final String[] hornNames = new String[]{
+        "display.none",
+        "display.arcofirst",
+        "display.arcosecond",
+        "display.arcothird",
+        "display.arcoultimatecooler",
+        "display.namekian"
+    };
 
     private final GuiNpcFormMenu menu;
     public Form form;
@@ -228,7 +235,7 @@ public class SubGuiFormDisplay extends SubGuiInterface implements ISubGuiListene
         // --- Adição dos Chifres ---
         y += 30;
         window.addLabel(new GuiNpcLabel(116, "display.horns", x, y, 0xFFFFFF));
-        window.addButton(new GuiButtonBiDirectional(116, width - x - 75 - 12, y - 5, 73, 20, hornNames, display.hornType == -1 ? 0 : display.hornType));
+        window.addButton(new GuiButtonBiDirectional(116, width - x - 75 - 12, y - 5, 73, 20, hornNames, display.hornType + 1));
 
 
         if (visualDisplay.race == DBCRace.ARCOSIAN) {
@@ -484,7 +491,7 @@ public class SubGuiFormDisplay extends SubGuiInterface implements ISubGuiListene
 
         // Horns Selection
         if (button.id == 116) {
-            display.hornType = button.getValue() == 0 ? -1 : button.getValue();
+            display.hornType = button.getValue() == 0 ? -1 : button.getValue() - 1;
             updateButtons();
         }
 
